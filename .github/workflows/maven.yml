@@ -1,4 +1,4 @@
-name: Main test piepeline
+name: Main test pipeline
 
 on: push
 
@@ -13,11 +13,29 @@ jobs:
           java-version: '23'
           distribution: 'temurin'
           cache: 'maven'
+      - name: Install Chromium & Chromedriver
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y chromium-browser chromium-chromedriver
+      - name: Export Chrome variables
+        run: |
+          echo "CHROME_BIN=/usr/bin/chromium-browser" >> $GITHUB_ENV
+          echo "CHROMEDRIVER_PATH=/usr/bin/chromedriver" >> $GITHUB_ENV
+          echo "CHROME_FLAGS=--headless=new --no-sandbox --disable-dev-shm-usage --disable-gpu --window-size=1920,1080" >> $GITHUB_ENV
+      - name: Verify Chrome & Chromedriver versions
+        run: |
+          /usr/bin/chromium-browser --version || true
+          /usr/bin/chromedriver --version || true
       - name: Run tests
-        run: mvn verify -Dheadless=true
+        run: mvn verify -Dheadless=true -Dwebdriver.chrome.driver=$CHROMEDRIVER_PATH -Dchrome.args="$CHROME_FLAGS"
+      - name: List generated files in target (debug)
+        if: always()
+        run: |
+          echo "Contents of target/:"
+          ls -la target || true
       - name: Publish Test Results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-results
-          path: ./target/test-report.html
+          path: ./target/*.html
